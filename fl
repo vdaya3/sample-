@@ -1,0 +1,20 @@
+[SERVICE]
+    Flush        1
+    Log_Level    info
+
+[INPUT]
+    Name          tail
+    Path          /fluentbit/logs/app.log
+    Parser        json
+    Tag           spring
+
+[FILTER]
+    Name          grep
+    Match         *
+    Regex         message ^.*
+
+[OUTPUT]
+    Name          forward
+    Match         *
+    Host          logstash
+    Port          5000
