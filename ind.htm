@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tech Radar Editor with SVS</title>
+
+<link
+  href="https://cdn.jsdelivr.net/npm/handsontable@12.1.0/dist/handsontable.min.css"
+  rel="stylesheet"
+/>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+  }
+  #topbar {
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  #svsCounts {
+    font-weight: bold;
+  }
+  #exportCsv {
+    padding: 6px 12px;
+    cursor: pointer;
+  }
+  #hot {
+    margin-bottom: 20px;
+    width: 100%;
+    max-width: 900px;
+  }
+  #radar {
+    margin-top: 40px;
+    max-width: 900px;
+  }
+  #buildRadar {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Tech Radar Editor</h1>
+
+<div id="topbar">
+  <div id="svsCounts">SVS Counts: </div>
+  <button id="exportCsv">Export CSV</button>
+</div>
+
+<div id="hot"></div>
+<button id="buildRadar">Build Radar</button>
+
+<svg id="radar" width="900" height="900"></svg>
+
+<script src="https://cdn.jsdelivr.net/npm/handsontable@12.1.0/dist/handsontable.min.js"></script>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+
+<script>
+const quadrants = [
+  "Languages & Frameworks",
+  "Tools",
+  "Platforms",
+  "Techniques"
+];
+const rings = ["Adopt", "Trial", "Assess", "Hold"];
+
+const hotContainer = document.getElementById("hot");
+
+const hot = new Handsontable(hotContainer, {
+  colHeaders: ["Name", "Quadrant", "Ring", "Description", "SVS"],
+  columns: [
+    { data: "name", type: "text" },
+    {
+      data: "quadrant",
+      type: "dropdown",
+      source: quadrants,
+    },
+    {
+      data: "ring",
+      type: "dropdown",
+      source: rings,
+    },
+    { data: "description", type: "text" },
+    { data: "svs", type: "text" }, // SVS column
+  ],
+  rowHeaders: true,
+  stretchH: "all",
+  licenseKey: "non-commercial-and-evaluation",
+});
+
+async function loadData() {
+  const res = await fetch("/api/data");
+  const data = await res.json();
+  hot.loadData(data);
+}
+loadData();
+
+async function saveData(data) {
+  await fetch("/api/data", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
+// SVS counts logic
+function updateSvsCounts() {
+  const data = hot.getData();
+  const svsCounts = {};
+  data.forEach((row) => {
+    const svs = row[4]; // SVS column index
+    if (svs && svs.trim() !== "") {
+      svsCounts[svs] = (svsCounts[svs] || 0) + 1;
+    }
+  });
+  const countsStr = Object.entries(svsCounts)
+    .map(([svs, count]) => `${svs}: ${count}`)
+    .join(", ") || "No SVS data";
+  document.getElementById("svsCounts").textContent = `SVS Counts: ${countsStr}`;
+}
+
+// CSV Export button logic
+document.getElementById("exportCsv").addEventListener("click", () => {
+  const data = hot.getData();
+  const headers = hot.getColHeader();
+
+  // Convert data to CSV string
+  const csvRows = [];
+  csvRows.push(headers.join(","));
+  data.forEach((row) => {
+    // Escape commas & quotes for safety
+    const escaped = row.map((cell) => {
+      if (cell == null) return "";
+      const str = String(cell);
+      if (str.includes(",") || str.includes('"')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    });
+    csvRows.push(escaped.join(","));
+  });
+
+  const csvString = csvRows.join("\n");
+  const blob = new Blob([csvString], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+
+  // Create a link and click it programmatically
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "tech-radar.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// Update SVS counts on Handsontable data change
+hot.addHook("afterChange", (changes, source) => {
+  if (source === "loadData") return;
+  updateSvsCounts();
+});
+
+// Update SVS counts on initial load
+hot.addHook("afterLoadData", () => {
+  updateSvsCounts();
+});
+
+// D3 Radar Visualization
+
+const svg = d3.select("#radar");
+const width = +svg.attr("width");
+const height = +svg.attr("height");
+const centerX = width / 2;
+const centerY = height / 2;
+const radius = Math.min(width, height) / 2 - 80;
+
+function drawRadar(items) {
+  svg.selectAll("*").remove();
+
+  // Draw rings
+  const ringScale = d3
+    .scaleBand()
+    .domain(rings)
+    .range([radius / rings.length, radius]);
+
+  rings.forEach((ring) => {
+    svg
+      .append("circle")
+      .attr("cx", centerX)
+      .attr("cy", centerY)
+      .attr("r", ringScale(ring))
+      .attr("fill", "none")
+      .attr("stroke", "#bbb")
+      .attr("stroke-dasharray", "4 2");
+
+    svg
+      .append("text")
+      .attr("x", centerX + 5)
+      .attr("y", centerY - ringScale(ring) + 15)
+      .text(ring)
+      .style("font-size", "14px")
+      .style("fill", "#666");
+  });
+
+  // Draw quadrant lines
+  const quadrantAngles = [0, 90, 180, 270];
+  quadrantAngles.forEach((angle) => {
+    const rad = (angle * Math.PI) / 180;
+    const x = centerX + radius * Math.cos(rad);
+    const y = centerY + radius * Math.sin(rad);
+    svg
+      .append("line")
+      .attr("x1", centerX)
+      .attr("y1", centerY)
+      .attr("x2", x)
+      .attr("y2", y)
+      .attr("stroke", "#bbb")
+      .attr("stroke-width", 1);
+  });
+
+  // Add quadrant labels
+  quadrants.forEach((quad, i) => {
+    const angle = (i * 90 + 45) * (Math.PI / 180);
+    const x = centerX + (radius + 40) * Math.cos(angle);
+    const y = centerY + (radius + 40) * Math.sin(angle);
+    svg
+      .append("text")
+      .attr("x", x)
+      .attr("y", y)
+      .text(quad)
+      .attr("text-anchor", "middle")
+      .attr("alignment-baseline", "middle")
+      .style("font-weight", "bold")
+      .style("font-size", "16px");
+  });
+
+  // Map rings to numeric radii for positioning dots
+  const ringRadiusMap = {};
+  rings.forEach((ring) => {
+    ringRadiusMap[ring] = ringScale(ring);
+  });
+
+  // Place dots
+  items.forEach((item) => {
+    const quadIndex = quadrants.indexOf(item.quadrant);
+    const ringRadius = ringRadiusMap[item.ring];
+
+    if (quadIndex === -1 || !ringRadius) return; // skip invalid data
+
+    // Angle within quadrant (spread dots randomly within quadrant sector)
+    const angleStart = (quadIndex * 90) * (Math.PI / 180);
+    const angleEnd = ((quadIndex + 1) * 90) * (Math.PI / 180);
+    const angle = Math.random() * (angleEnd - angleStart) + angleStart;
+
+    // Random radius near ring radius
+    const r = ringRadius - 20 + Math.random() * 40;
+
+    const x = centerX + r * Math.cos(angle);
+    const y = centerY + r * Math.sin(angle);
+
+    // Dot
+    svg
+      .append("circle")
+      .attr("cx", x)
+      .attr("cy", y)
+      .attr("r", 7)
+      .attr("fill", "#007acc")
+      .attr("stroke", "#004a99")
+      .attr("stroke-width", 1)
+      .append("title")
+      .text(`${item.name}\n${item.description}\nSVS: ${item.svs || "N/A"}`);
+
+    // Label
+    svg
+      .append("text")
+      .attr("x", x + 10)
+      .attr("y", y + 5)
+      .text(item.name)
+      .style("font-size", "12px")
+      .style("fill", "#333");
+  });
+}
+
+document.getElementById("buildRadar").addEventListener("click", async () => {
+  const data = hot.getSourceData();
+  await saveData(data);
+  drawRadar(data);
+});
+
+// Draw radar initially with loaded data after data is loaded
+hot.addHook("afterLoadData", () => {
+  drawRadar(hot.getSourceData());
+});
+</script>
+
+</body>
+</html>
