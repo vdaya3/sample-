@@ -25,5 +25,48 @@ Deploy a single-node MongoDB instance on GKE and test basic connectivity (CRUD o
 	6.	(Optional) Clean up
 
 ⸻
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:6.0
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: mongo-storage
+          mountPath: /data/db
+      volumes:
+      - name: mongo-storage
+        emptyDir: {}  # For POC only, not for production!
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-service
+spec:
+  selector:
+    app: mongodb
+  ports:
+  - protocol: TCP
+    port: 27017
+    targetPort: 27017
+  type: ClusterIP
 
-1️⃣ Create a GKE Cluster
+kubectl apply -f mongodb-deployment.yaml
+kubectl port-forward svc/mongodb-service 27017:27017
+mongosh "mongodb://localhost:27017"
+use pocdb;
+db.test.insertOne({ name: "hello", created: new Date() });
+db.test.find();
