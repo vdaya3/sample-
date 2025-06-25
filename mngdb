@@ -1,0 +1,29 @@
+Great! Here’s a simple Proof of Concept (PoC) plan for deploying a MongoDB instance on Google Kubernetes Engine (GKE) with minimal configuration and testing.
+
+⸻
+
+✅ PoC Goal
+
+Deploy a single-node MongoDB instance on GKE and test basic connectivity (CRUD operations).
+
+⸻
+
+🔧 Prerequisites
+	•	GCP project with billing enabled
+	•	GKE cluster (can be created via gcloud or GCP Console)
+	•	kubectl and gcloud CLI installed and configured
+	•	Docker (optional, if you build custom images)
+
+⸻
+
+🧱 High-Level Steps
+	1.	Create GKE Cluster
+	2.	Write Kubernetes Deployment and Service YAML for MongoDB
+	3.	Deploy MongoDB to GKE
+	4.	Port-forward to MongoDB Pod (for local testing)
+	5.	Test CRUD using MongoDB CLI or MongoDB Compass
+	6.	(Optional) Clean up
+
+⸻
+
+1️⃣ Create a GKE Cluster
