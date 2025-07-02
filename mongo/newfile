@@ -1,0 +1,157 @@
+🔧 STEP 1: Generate TLS Certificates
+mkdir mongo-cert && cd mongo-cert
+
+# Generate private key and cert with SAN for MongoDB hostname
+openssl req -newkey rsa:4096 -nodes -x509 -days 365 \
+  -keyout tls.key -out tls.crt \
+  -subj "/CN=mongodb-0.mongodb.gps-dex.svc.cluster.local" \
+  -addext "subjectAltName=DNS:mongodb-0.mongodb.gps-dex.svc.cluster.local"
+
+
+🔐 STEP 2: Create Kubernetes Secrets
+
+# Create TLS secret
+kubectl create secret tls mongodb-tls-secret \
+  --cert=tls.crt \
+  --key=tls.key \
+  -n gps-dex
+
+# Create credentials secret
+kubectl create secret generic mongodb-cred \
+  --from-literal=username=mongoadmin \
+  --from-literal=password=securepass123 \
+  -n gps-dex
+
+STEP 3: Apply MongoDB Deployment YAML
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+  namespace: gps-dex
+spec:
+  clusterIP: None
+  selector:
+    app: mongodb
+  ports:
+    - port: 27017
+      targetPort: 27017
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+  namespace: gps-dex
+spec:
+  serviceName: mongodb
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: mongo:6.0
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: mongodb-data
+              mountPath: /data/db
+            - name: tls-volume
+              mountPath: /tls
+              readOnly: true
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-cred
+                  key: username
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-cred
+                  key: password
+          command: [ "mongod" ]
+          args:
+            - "--bind_ip_all"
+            - "--auth"
+            - "--tlsMode=requireTLS"
+            - "--tlsCertificateKeyFile=/tls/tls.crt"
+            - "--tlsCAFile=/tls/tls.crt"
+      volumes:
+        - name: tls-volume
+          secret:
+            secretName: mongodb-tls-secret
+  volumeClaimTemplates:
+    - metadata:
+        name: mongodb-data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 1Gi
+
+
+Apply it:
+kubectl apply -f mongodb.yaml
+kubectl get pods -n gps-dex
+
+STEP 4: Deploy a Test Mongo Client Pod
+
+Create mongo-client.yaml:
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mongo-client
+  namespace: gps-dex
+spec:
+  containers:
+    - name: mongo-client
+      image: mongo:6.0
+      command: [ "sleep" ]
+      args: [ "3600" ]
+      volumeMounts:
+        - name: tls-volume
+          mountPath: /tls
+  volumes:
+    - name: tls-volume
+      secret:
+        secretName: mongodb-tls-secret
+
+Apply it:
+kubectl apply -f mongo-client.yaml
+
+🔐 STEP 5: Connect from Client Pod (TLS + Auth)
+kubectl exec -it mongo-client -n gps-dex -- bash
+Then run:
+
+mongo --tls \
+  --tlsCertificateKeyFile /tls/tls.crt \
+  --tlsCAFile /tls/tls.crt \
+  --host mongodb-0.mongodb.gps-dex.svc.cluster.local \
+  --authenticationDatabase admin \
+  -u mongoadmin \
+  -p securepass123
+
+If successful, you’ll enter the MongoDB shell securely.
+
+⸻
+
+✅ Done!
+
+You now have a fully working:
+	•	TLS-encrypted
+	•	Authenticated
+	•	MongoDB StatefulSet
+	•	With built-in connection test client
+
+
+
+
+
+
