@@ -1,0 +1,39 @@
+public class MongoLoadTestRunner {
+    public static void main(String[] args) throws Exception {
+        MongoClient client = MongoClients.create("mongodb://localhost:5255");
+        MongoCollection<Document> collection = client.getDatabase("testdb").getCollection("accounts");
+
+        List<String> accountNumbers = Files.readAllLines(Paths.get("src/main/resources/sample_accounts.txt"));
+        Random random = new Random();
+
+        for (int tps : new int[]{100, 200, 500, 1000}) {
+            System.out.println("\n🚀 Load test at " + tps + " TPS for 30 seconds");
+
+            ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(100);
+            int totalRequests = 30 * tps;
+            long intervalMicros = 1_000_000L / tps;
+
+            CountDownLatch latch = new CountDownLatch(totalRequests);
+
+            for (int i = 0; i < totalRequests; i++) {
+                int index = i;
+                scheduler.schedule(() -> {
+                    String acc = accountNumbers.get(random.nextInt(accountNumbers.size()));
+                    long start = System.nanoTime();
+                    try {
+                        Document doc = collection.find(new Document("accountNumber", acc)).first();
+                        long latency = (System.nanoTime() - start) / 1_000_000;
+                        System.out.println("✔️ Req " + index + ": " + acc + " | Latency: " + latency + "ms");
+                    } catch (Exception e) {
+                        System.err.println("❌ Error: " + e.getMessage());
+                    }
+                    latch.countDown();
+                }, i * intervalMicros, TimeUnit.MICROSECONDS);
+            }
+
+            scheduler.shutdown();
+            latch.await();
+            System.out.println("✅ Finished " + tps + " TPS test");
+        }
+    }
+}
