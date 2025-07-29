@@ -1,0 +1,87 @@
+import com.mongodb.client.*;
+import com.mongodb.client.model.InsertOneModel;
+import com.mongodb.client.model.WriteModel;
+import org.bson.Document;
+import org.json.JSONObject;
+
+import java.sql.*;
+import java.util.*;
+
+public class OracleToMongoMigrator {
+    private static final int BATCH_SIZE = 100_000;
+
+    private static final String ORACLE_URL = "jdbc:oracle:thin:@//host:port/service";
+    private static final String ORACLE_USER = "username";
+    private static final String ORACLE_PASS = "password";
+
+    private static final String MONGO_URI = "mongodb://localhost:27017";
+    private static final String MONGO_DB = "your_db";
+    private static final String MONGO_COLLECTION = "your_collection";
+
+    public static void main(String[] args) {
+        try (
+            Connection oracleConn = DriverManager.getConnection(ORACLE_URL, ORACLE_USER, ORACLE_PASS);
+            MongoClient mongoClient = MongoClients.create(MONGO_URI)
+        ) {
+            MongoCollection<Document> collection = mongoClient
+                    .getDatabase(MONGO_DB)
+                    .getCollection(MONGO_COLLECTION);
+
+            String lastKey = "000000000000000"; // Start from smallest possible key
+
+            while (true) {
+                List<WriteModel<Document>> batch = new ArrayList<>();
+
+                String sql = "SELECT key, value, map_id, expire_time " +
+                             "FROM your_table " +
+                             "WHERE key > ? " +
+                             "ORDER BY key FETCH FIRST ? ROWS ONLY";
+
+                try (PreparedStatement stmt = oracleConn.prepareStatement(sql)) {
+                    stmt.setString(1, lastKey);
+                    stmt.setInt(2, BATCH_SIZE);
+                    ResultSet rs = stmt.executeQuery();
+
+                    int rowsFetched = 0;
+                    String currentLastKey = lastKey;
+
+                    while (rs.next()) {
+                        String key = rs.getString("key");
+                        String valueJson = rs.getString("value");
+                        long mapId = rs.getLong("map_id");
+                        long expireTime = rs.getLong("expire_time");
+
+                        Document doc = new Document("_id", key)
+                                .append("map_id", mapId)
+                                .append("expire_time", expireTime);
+
+                        try {
+                            JSONObject jsonObj = new JSONObject(valueJson);
+                            Document valueDoc = Document.parse(jsonObj.toString());
+                            doc.append("value", valueDoc);
+                        } catch (Exception e) {
+                            System.err.println("JSON parse error for key: " + key);
+                            doc.append("value", new Document("parse_error", true));
+                        }
+
+                        batch.add(new InsertOneModel<>(doc));
+                        currentLastKey = key; // move the cursor
+                        rowsFetched++;
+                    }
+
+                    if (batch.isEmpty()) {
+                        System.out.println("Migration completed.");
+                        break;
+                    }
+
+                    collection.bulkWrite(batch);
+                    System.out.printf("Processed %d records. Last key: %s%n", rowsFetched, currentLastKey);
+                    lastKey = currentLastKey;
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
