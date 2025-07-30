@@ -1,0 +1,39 @@
+package com.example.migrator;
+
+import java.util.concurrent.*;
+
+public class OracleToMongoMigrator {
+    public static void main(String[] args) throws Exception {
+        int offset = Integer.parseInt(System.getenv("OFFSET"));
+        int limit = Integer.parseInt(System.getenv("LIMIT"));
+        int batchSize = 10000;
+        int numThreads = 4;
+
+        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+
+        for (int i = offset; i < offset + limit; i += batchSize) {
+            final int batchOffset = i;
+            executor.submit(() -> {
+                try {
+                    OracleService oracleService = new OracleService();
+                    MongoService mongoService = new MongoService();
+
+                    var records = oracleService.fetchBatch(batchOffset, batchSize);
+                    if (!records.isEmpty()) {
+                        mongoService.insertBatch(records);
+                        System.out.println("Migrated batch starting at: " + batchOffset);
+                    }
+
+                    oracleService.close();
+                    mongoService.close();
+                } catch (Exception e) {
+                    System.err.println("Error in batch: " + batchOffset);
+                    e.printStackTrace();
+                }
+            });
+        }
+
+        executor.shutdown();
+        executor.awaitTermination(2, TimeUnit.HOURS);
+    }
+}
