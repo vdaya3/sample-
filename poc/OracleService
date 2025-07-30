@@ -1,0 +1,41 @@
+package com.example.migrator;
+
+import java.sql.*;
+import java.util.*;
+import org.bson.Document;
+
+public class OracleService {
+    private final Connection connection;
+
+    public OracleService() throws Exception {
+        String url = "jdbc:oracle:thin:@//oracle-host:1521/ORCLPDB1";
+        String user = "your_oracle_user";
+        String pass = "your_oracle_password";
+        connection = DriverManager.getConnection(url, user, pass);
+    }
+
+    public List<Document> fetchBatch(int offset, int limit) throws SQLException {
+        List<Document> docs = new ArrayList<>();
+        String sql = String.format("SELECT * FROM your_table OFFSET %d ROWS FETCH NEXT %d ROWS ONLY", offset, limit);
+
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            ResultSetMetaData meta = rs.getMetaData();
+            int cols = meta.getColumnCount();
+
+            while (rs.next()) {
+                Document doc = new Document();
+                for (int i = 1; i <= cols; i++) {
+                    doc.append(meta.getColumnName(i), rs.getObject(i));
+                }
+                docs.add(doc);
+            }
+        }
+        return docs;
+    }
+
+    public void close() throws SQLException {
+        connection.close();
+    }
+}
