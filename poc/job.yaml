@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: mongo-migrator-
+spec:
+  template:
+    spec:
+      containers:
+        - name: migrator
+          image: your-docker-repo/oracle-to-mongo:latest
+          env:
+            - name: OFFSET
+              value: "0"  # will change per job
+            - name: LIMIT
+              value: "10000000"
+      restartPolicy: Never
+  backoffLimit: 1
