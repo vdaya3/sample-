@@ -1,0 +1,29 @@
+package com.example.migrator;
+
+import java.util.List;
+import com.mongodb.client.*;
+import org.bson.Document;
+
+public class MongoService {
+    private final MongoClient client;
+    private final MongoCollection<Document> collection;
+
+    public MongoService() {
+        String uri = "mongodb://your_mongo_user:your_mongo_pass@mongo-host:27017";
+        String db = "your_mongo_db";
+        String coll = "your_collection";
+
+        client = MongoClients.create(uri);
+        collection = client.getDatabase(db).getCollection(coll);
+    }
+
+    public void insertBatch(List<Document> docs) {
+        if (!docs.isEmpty()) {
+            collection.insertMany(docs);
+        }
+    }
+
+    public void close() {
+        client.close();
+    }
+}
