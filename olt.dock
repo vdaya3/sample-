@@ -1,0 +1,20 @@
+FROM eclipse-temurin:17-jdk-jammy as builder
+WORKDIR /app
+COPY . /app
+RUN ./mvnw package -DskipTests
+
+FROM eclipse-temurin:17-jre-jammy
+WORKDIR /app
+
+# Download OpenTelemetry Java Agent
+ADD https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v1.34.0/opentelemetry-javaagent.jar /otel/opentelemetry-javaagent.jar
+
+COPY --from=builder /app/target/*.jar app.jar
+
+ENV OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+ENV OTEL_SERVICE_NAME=spring-boot-service
+ENV OTEL_LOGS_EXPORTER=otlp
+ENV JAVA_TOOL_OPTIONS="-javaagent:/otel/opentelemetry-javaagent.jar"
+
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]
