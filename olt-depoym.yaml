@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-boot-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spring-boot-service
+  template:
+    metadata:
+      labels:
+        app: spring-boot-service
+    spec:
+      containers:
+        - name: spring-boot-service
+          image: gcr.io/YOUR_PROJECT_ID/spring-boot-service:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector:4318
+            - name: OTEL_SERVICE_NAME
+              value: spring-boot-service
+            - name: OTEL_LOGS_EXPORTER
+              value: otlp
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spring-boot-service
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: spring-boot-service
