@@ -1,0 +1,87 @@
+import express from 'express';
+import crypto from 'crypto';
+import fetch from 'node-fetch';
+
+const app = express();
+app.use(express.json({ verify: rawBodySaver }));
+
+function rawBodySaver(req, res, buf) {
+  req.rawBody = buf;
+}
+
+const GITHUB_SECRET = process.env.GITHUB_SECRET;
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const CHILD_REPOS = process.env.CHILD_REPOS?.split(',').map(r => r.trim()) || [];
+
+// --- Verify webhook signature (HMAC-SHA256) ---
+function verifySignature(req) {
+  const signature = req.headers['x-hub-signature-256'];
+  if (!signature || !req.rawBody) return false;
+
+  const hmac = crypto.createHmac('sha256', GITHUB_SECRET);
+  const digest = 'sha256=' + hmac.update(req.rawBody).digest('hex');
+  try {
+    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest));
+  } catch {
+    return false;
+  }
+}
+
+// --- Helper: send repository_dispatch to a child repo ---
+async function triggerChild(repo) {
+  const url = `https://api.github.com/repos/myorg/${repo}/dispatches`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/vnd.github+json',
+      'Authorization': `Bearer ${GITHUB_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ event_type: 'parent-updated' })
+  });
+  if (!res.ok) throw new Error(`Failed to trigger ${repo}: ${res.status}`);
+}
+
+// --- Main webhook endpoint ---
+app.post('/github-parent-listener', async (req, res) => {
+  if (!verifySignature(req)) {
+    console.warn('Invalid signature from GitHub');
+    return res.status(403).send('Invalid signature');
+  }
+
+  const body = req.body;
+  if (body?.ref !== 'refs/heads/main') return res.status(200).send('Ignoring non-main push');
+
+  console.log(`Parent updated: ${body.head_commit?.message || 'no commit message'}`);
+
+  // trigger all children concurrently with retry
+  const results = await Promise.allSettled(
+    CHILD_REPOS.map(async (repo) => {
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          await triggerChild(repo);
+          console.log(`Triggered ${repo}`);
+          return;
+        } catch (err) {
+          console.error(`Attempt ${attempt} failed for ${repo}:`, err.message);
+          await new Promise(r => setTimeout(r, 2000 * attempt));
+        }
+      }
+      throw new Error(`All retries failed for ${repo}`);
+    })
+  );
+
+  const failed = results.filter(r => r.status === 'rejected');
+  if (failed.length > 0) {
+    console.error('Some child triggers failed:', failed.map(f => f.reason.message));
+    return res.status(500).send('Partial failure');
+  }
+
+  res.status(200).send('All children triggered');
+});
+
+// --- Health endpoint ---
+app.get('/health', (req, res) => res.send('OK'));
+
+const port = process.env.PORT || 8080;
+app.listen(port, () => console.log(`Webhook listener running on port ${port}`));
