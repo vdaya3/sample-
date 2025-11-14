@@ -1,0 +1,59 @@
+No, you don’t have to write full, human-readable prompts for an MCP server to act.
+
+Here’s the distinction:
+
+⸻
+
+1️⃣ Traditional LLM Prompts
+	•	You type: “Update all child POM files to match the parent version 1.4.8 and notify contributors.”
+	•	The LLM interprets it and tries to generate instructions or code.
+	•	Requires careful wording, context, examples — basically a mini conversation every time.
+
+⸻
+
+2️⃣ MCP Server Approach
+	•	The MCP server exposes structured functions or tools with clearly defined parameters.
+	•	Example:
+
+{
+  "name": "updateChildPom",
+  "description": "Updates the parent version in a child repo POM",
+  "parameters": {
+    "repo": "string",
+    "version": "string"
+  }
+}
+
+	•	The LLM doesn’t need to write human language. It just calls:
+
+{
+  "action": "updateChildPom",
+  "parameters": {
+    "repo": "service-a",
+    "version": "1.4.8"
+  }
+}
+
+	•	You give the model structured input, not verbose prompts.
+
+⸻
+
+✅ Advantages
+	1.	Reliable & deterministic – no misinterpretation.
+	2.	No need to explain context in natural language every time.
+	3.	Reusable workflows – MCP server defines capabilities once, model just triggers them.
+	4.	Easier automation – machine-readable, easy to log, audit, and test.
+	5.	Can chain actions – like: fetch parent version → update all children → create PR → notify reviewers.
+
+⸻
+
+⚡ Bottom Line
+
+You don’t need human-readable prompts; you just define tools, functions, or endpoints in the MCP server, then pass structured calls.
+Think of it like APIs for the AI, not chatting.
+
+The “prompt” becomes the function call, not a sentence you type.
+
+⸻
+
+If you want, I can show a side-by-side comparison: how a traditional LLM prompt looks vs how the same workflow works fully structured via MCP server, ready for automation. It’s eye-opening. Do you want me to do that?
