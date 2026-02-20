@@ -1,0 +1,79 @@
+import os
+import sys
+import shutil
+from autogen import AssistantAgent
+from autogen.agentchat.contrib.retrieve_user_proxy_agent import RetrieveUserProxyAgent
+
+# ================= CONFIG =================
+DOCS_PATH = "./docs"
+CHROMA_PATH = "./chroma"
+
+# ============== RE-INGEST =================
+if "--reingest" in sys.argv:
+    if os.path.exists(CHROMA_PATH):
+        shutil.rmtree(CHROMA_PATH)
+        print("Chroma DB deleted. Fresh ingestion will occur.")
+
+# ============== LLM CONFIG =================
+llm_config = {
+    "model": "deepseek-r1-distill-llama-8b",
+    "base_url": "http://127.0.0.1:1234/v1",
+    "api_key": "lm-studio",
+    "temperature": 0,
+}
+
+assistant = AssistantAgent(
+    name="assistant",
+    llm_config=llm_config,
+    system_message=(
+        "You MUST answer ONLY using the retrieved context. "
+        "If the answer is not present in the context, "
+        "respond exactly: 'Not found in source documents.'"
+    ),
+)
+
+# ============== RAG PROXY =================
+ragproxy = RetrieveUserProxyAgent(
+    name="ragproxy",
+    human_input_mode="NEVER",
+    code_execution_config=False,
+    retrieve_config={
+        "task": "qa",
+        "docs_path": DOCS_PATH,
+        "chunk_token_size": 800,
+        "model": llm_config["model"],
+        "embedding_model": "all-MiniLM-L6-v2",  # stable local embeddings
+        "vector_db": "chroma",
+        "persist_path": CHROMA_PATH,
+        "collection_name": "rag_collection",
+        "get_or_create": True,
+        "recursive": True,
+        "verbose": True,   # important for debugging
+    },
+)
+
+# ============== VERIFY COLLECTION =================
+try:
+    collection = ragproxy._vector_db.get_collection("rag_collection")
+    print(f"Vector store contains {collection.count()} document chunks.")
+except:
+    print("Vector store will be initialized on first query.")
+
+# ============== CLI LOOP =================
+print("\n=== RAG CLI Agent ===")
+print("Type 'exit' to quit\n")
+
+while True:
+    query = input("You: ")
+
+    if query.lower() in ["exit", "quit"]:
+        print("Goodbye.")
+        break   
+
+    ragproxy.initiate_chat(
+        assistant,
+        message=query,
+        clear_history=False,
+    )
+
+    print()
