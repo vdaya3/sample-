@@ -1,0 +1,6 @@
+GAIP_TOKEN=your_token_here
+GAIP_CHAT_BASE=https://etiv-uat-dp1-gaip-api.ikp1002h-np.com/etiv-ssvc-aigateway-ea-chatcompletion-uat-internal-proxy/v1/api/v1
+GAIP_EMBED_BASE=https://etiv-uat-dp1-gaip-api.ikp1002h-np.com/etiv-ssvc-aigateway-ea-chatcompletion-uat-internal-proxy/v1/api/v1
+GAIP_LLM_MODEL=phi4
+GAIP_EMBEDDING_MODEL=nomic-embed-text-v1.5-v1
+SSL_CERT_FILE=./config/certs/hsbc-truststore.pem
