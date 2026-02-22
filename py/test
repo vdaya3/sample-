@@ -1,0 +1,29 @@
+import requests, os
+from dotenv import load_dotenv
+load_dotenv()
+
+res = requests.post(
+    os.getenv("GAIP_CHAT_BASE") + "/chat/completions",
+    headers={"Authorization": f"Bearer {os.getenv('GAIP_TOKEN')}"},
+    json={
+        "model": os.getenv("GAIP_LLM_MODEL"),
+        "messages": [{"role": "user", "content": "hello"}]
+    },
+    verify=os.getenv("SSL_CERT_FILE")
+)
+
+print(res.json())
+
+
+
+res = requests.post(
+    os.getenv("GAIP_EMBED_BASE") + "/embeddings",
+    headers={"Authorization": f"Bearer {os.getenv('GAIP_TOKEN')}"},
+    json={
+        "model": os.getenv("GAIP_EMBEDDING_MODEL"),
+        "input": "hello world"
+    },
+    verify=os.getenv("SSL_CERT_FILE")
+)
+
+print(res.json())
