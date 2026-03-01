@@ -1,0 +1,102 @@
+import os
+import requests
+from fastmcp import FastMCP
+
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+GITHUB_API_URL = os.getenv("GITHUB_API_URL", "https://api.github.com")
+
+mcp = FastMCP("GitHubMCP")
+
+headers = {
+    "Authorization": f"Bearer {GITHUB_TOKEN}",
+    "Accept": "application/vnd.github+json"
+}
+
+# ----------------------------
+# Utility
+# ----------------------------
+
+def parse_pr_url(pr_url: str):
+    parts = pr_url.replace("https://", "").split("/")
+    owner = parts[1]
+    repo = parts[2]
+    pr_number = parts[4]
+    return owner, repo, pr_number
+
+
+# ----------------------------
+# Tool 1: Get PR Files
+# ----------------------------
+
+@mcp.tool()
+def list_pull_request_files(pr_url: str):
+    """
+    Returns list of changed files with patches.
+    """
+    owner, repo, pr_number = parse_pr_url(pr_url)
+
+    url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/pulls/{pr_number}/files"
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+
+    return response.json()
+
+
+# ----------------------------
+# Tool 2: Post Inline Comment
+# ----------------------------
+
+@mcp.tool()
+def create_review_comment(
+    pr_url: str,
+    body: str,
+    commit_id: str,
+    path: str,
+    line: int
+):
+    """
+    Posts inline review comment.
+    """
+    owner, repo, pr_number = parse_pr_url(pr_url)
+
+    url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/pulls/{pr_number}/comments"
+
+    payload = {
+        "body": body,
+        "commit_id": commit_id,
+        "path": path,
+        "line": line
+    }
+
+    response = requests.post(url, headers=headers, json=payload)
+    response.raise_for_status()
+
+    return {"status": "comment_posted"}
+
+
+# ----------------------------
+# Tool 3: Post Final PR Review
+# ----------------------------
+
+@mcp.tool()
+def create_pull_request_review(pr_url: str, body: str):
+    """
+    Posts final summary review.
+    """
+    owner, repo, pr_number = parse_pr_url(pr_url)
+
+    url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/pulls/{pr_number}/reviews"
+
+    payload = {
+        "body": body,
+        "event": "COMMENT"
+    }
+
+    response = requests.post(url, headers=headers, json=payload)
+    response.raise_for_status()
+
+    return {"status": "summary_posted"}
+
+
+if __name__ == "__main__":
+    mcp.run()
