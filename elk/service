@@ -1,0 +1,246 @@
+Good. This is the right mindset — operate Beats like real production services, not just background daemons.
+
+You want:
+	•	start / stop / restart / status
+	•	last shutdown time
+	•	shutdown reason
+	•	fixed log path
+	•	controlled restart policy
+
+We’ll do this properly using systemd (Linux production standard).
+
+⸻
+
+✅ 1️⃣ Proper Production systemd Service for Filebeat
+
+Create or override:
+
+sudo systemctl edit --full filebeat
+
+Replace with:
+
+[Unit]
+Description=Filebeat Log Shipper
+Documentation=https://www.elastic.co/beats/filebeat
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+
+ExecStart=/usr/share/filebeat/bin/filebeat \
+  --environment systemd \
+  -c /etc/filebeat/filebeat.yml
+
+Restart=always
+RestartSec=5
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+LimitNOFILE=65536
+TimeoutStopSec=30
+
+StandardOutput=append:/var/log/filebeat/filebeat-service.log
+StandardError=append:/var/log/filebeat/filebeat-service-error.log
+
+[Install]
+WantedBy=multi-user.target
+
+
+⸻
+
+✅ 2️⃣ Proper Production systemd Service for Metricbeat
+
+sudo systemctl edit --full metricbeat
+
+[Unit]
+Description=Metricbeat Metrics Shipper
+Documentation=https://www.elastic.co/beats/metricbeat
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+
+ExecStart=/usr/share/metricbeat/bin/metricbeat \
+  --environment systemd \
+  -c /etc/metricbeat/metricbeat.yml
+
+Restart=always
+RestartSec=5
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+LimitNOFILE=65536
+TimeoutStopSec=30
+
+StandardOutput=append:/var/log/metricbeat/metricbeat-service.log
+StandardError=append:/var/log/metricbeat/metricbeat-service-error.log
+
+[Install]
+WantedBy=multi-user.target
+
+
+⸻
+
+✅ 3️⃣ Reload & Enable
+
+sudo systemctl daemon-reload
+sudo systemctl enable filebeat
+sudo systemctl enable metricbeat
+sudo systemctl restart filebeat
+sudo systemctl restart metricbeat
+
+
+⸻
+
+🎯 Now You Get Clean Control
+
+Start
+
+systemctl start filebeat
+
+Stop
+
+systemctl stop filebeat
+
+Restart
+
+systemctl restart filebeat
+
+Status
+
+systemctl status filebeat
+
+
+⸻
+
+🔎 Get Last Shutdown Time + Reason
+
+This is what real ops teams use.
+
+journalctl -u filebeat --since "1 day ago"
+
+To see last stop:
+
+journalctl -u filebeat | grep "Stopped"
+
+To see crash reason:
+
+journalctl -u filebeat -n 100
+
+If killed by system (OOM):
+
+You’ll see:
+
+Killed process XXXX (filebeat) out of memory
+
+Check:
+
+dmesg | grep -i kill
+
+
+⸻
+
+🕒 Get Exact Last Restart Timestamp
+
+systemctl show filebeat --property=ActiveEnterTimestamp
+
+Last exit timestamp:
+
+systemctl show filebeat --property=InactiveEnterTimestamp
+
+
+⸻
+
+📁 Ensure Log Path Exists
+
+Create log directories properly:
+
+sudo mkdir -p /var/log/filebeat
+sudo mkdir -p /var/log/metricbeat
+sudo chown -R root:root /var/log/filebeat
+sudo chown -R root:root /var/log/metricbeat
+
+
+⸻
+
+🔥 Optional: Custom Wrapper Script (Advanced Ops)
+
+If you want one command showing:
+	•	status
+	•	last shutdown
+	•	memory usage
+	•	log path
+	•	error count
+
+Create:
+
+sudo nano /usr/local/bin/beats-status
+
+Add:
+
+#!/bin/bash
+echo "===== FILEBEAT STATUS ====="
+systemctl status filebeat --no-pager | head -n 10
+echo ""
+echo "Last Shutdown:"
+systemctl show filebeat --property=InactiveEnterTimestamp
+echo ""
+echo "Recent Errors:"
+journalctl -u filebeat -n 20 | grep -i error
+echo ""
+echo "Log Path: /var/log/filebeat/"
+
+Make executable:
+
+chmod +x /usr/local/bin/beats-status
+
+Run:
+
+beats-status
+
+
+⸻
+
+🚨 Why This Matters
+
+Earlier your beats were stopping after 1 hour.
+
+Now with:
+	•	Restart=always
+	•	Log capture to dedicated files
+	•	Journal tracing
+	•	Memory/file descriptor limits raised
+
+If it stops, you will know exactly why.
+
+No more mystery.
+
+⸻
+
+⚡ Real Production Advice
+
+If beats stop without logs:
+
+99% causes:
+	•	Elasticsearch write rejection
+	•	JVM heap full
+	•	Disk full
+	•	OOM kill
+	•	File descriptor exhaustion
+
+Now your systemd configuration will reveal it immediately.
+
+⸻
+
+If you want next level:
+I can give you a monitoring dashboard setup in Kibana to alert when:
+	•	Beats stop
+	•	Queue fills
+	•	ES write rejects
+	•	Disk crosses 70%
+
+That’s how mature logging stacks are run.
