@@ -1,0 +1,33 @@
+#################################
+# SERVER
+#################################
+
+server.port: 5601
+server.host: "0.0.0.0"
+
+#################################
+# ELASTICSEARCH CONNECTION
+#################################
+
+elasticsearch.hosts: ["http://127.0.0.1:9200"]
+elasticsearch.username: "kibana_system"
+elasticsearch.password: "YOUR_PASSWORD"
+
+#################################
+# SECURITY
+#################################
+
+xpack.security.enabled: true
+xpack.encryptedSavedObjects.encryptionKey: "change-this-to-32-character-string"
+xpack.reporting.encryptionKey: "change-this-to-32-character-string"
+xpack.security.encryptionKey: "change-this-to-32-character-string"
+
+#################################
+# LOGGING
+#################################
+
+logging.root.level: info
+logging.appenders.file.type: file
+logging.appenders.file.fileName: /var/log/kibana/kibana.log
+logging.appenders.file.layout.type: json
+logging.root.appenders: [default, file]
