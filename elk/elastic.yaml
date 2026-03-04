@@ -1,0 +1,45 @@
+#################################
+# CLUSTER
+#################################
+
+cluster.name: prod-cluster
+node.name: node-1
+
+# IMPORTANT for future expansion
+node.roles: [ master, data, ingest ]
+
+#################################
+# NETWORK
+#################################
+
+network.host: 0.0.0.0
+http.port: 9200
+
+# Required for single node now
+discovery.type: single-node
+
+#################################
+# SECURITY
+#################################
+
+xpack.security.enabled: true
+xpack.security.enrollment.enabled: true
+
+#################################
+# MEMORY SAFETY
+#################################
+
+bootstrap.memory_lock: true
+
+#################################
+# PATHS
+#################################
+
+path.data: /var/lib/elasticsearch
+path.logs: /var/log/elasticsearch
+
+#################################
+# INDEX DEFAULTS (Single Node Safe)
+#################################
+
+action.auto_create_index: true
