@@ -1,0 +1,118 @@
+############################
+# Filebeat Production Config
+############################
+
+filebeat.shutdown_timeout: 30s
+
+filebeat.registry.flush: 10s
+filebeat.registry.file_permissions: 0600
+
+# ==============================
+# INPUTS
+# ==============================
+
+filebeat.inputs:
+
+# Heartbeat Logs
+- type: filestream
+  id: heartbeat-logs
+  enabled: true
+  paths:
+    - /appvol/**/upi_heartbeat.log
+  fields:
+    log_type: heartbeat
+    service: upi
+  fields_under_root: true
+  ignore_older: 72h
+  close_inactive: 10m
+
+# Financial Logs
+- type: filestream
+  id: fin-logs
+  enabled: true
+  paths:
+    - /appvol/**/upi-fin-service.log
+  fields:
+    log_type: fin
+    service: upi
+  fields_under_root: true
+  ignore_older: 72h
+  close_inactive: 10m
+
+# Non-Financial Logs
+- type: filestream
+  id: non-fin-logs
+  enabled: true
+  paths:
+    - /appvol/**/upi-non-fin-service.log
+  fields:
+    log_type: non-fin
+    service: upi
+  fields_under_root: true
+  ignore_older: 72h
+  close_inactive: 10m
+
+
+# ==============================
+# QUEUE (Prevents sudden stops)
+# ==============================
+
+queue.mem:
+  events: 8192
+  flush.min_events: 2048
+  flush.timeout: 5s
+
+
+# ==============================
+# OUTPUT
+# ==============================
+
+output.elasticsearch:
+  hosts: ["http://ELASTIC_SERVER_IP:9200"]
+  username: "filebeat_user"
+  password: "password"
+
+  worker: 2
+  bulk_max_size: 2048
+  compression_level: 3
+
+  max_retries: -1
+  backoff.init: 1s
+  backoff.max: 60s
+
+  index: "filebeat"
+
+setup.ilm.enabled: false
+
+
+# ==============================
+# MONITORING
+# ==============================
+
+monitoring.enabled: true
+monitoring.elasticsearch:
+  hosts: ["http://ELASTIC_SERVER_IP:9200"]
+  username: "filebeat_user"
+  password: "password"
+
+
+# ==============================
+# HTTP STATS (CRITICAL)
+# ==============================
+
+http.enabled: true
+http.host: 0.0.0.0
+http.port: 5066
+
+
+# ==============================
+# LOGGING
+# ==============================
+
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /var/log/filebeat
+  name: filebeat
+  keepfiles: 7
+  permissions: 0644
