@@ -1,0 +1,100 @@
+############################
+# Metricbeat Production Config
+############################
+
+metricbeat.config.modules:
+  path: ${path.config}/modules.d/*.yml
+  reload.enabled: false
+
+# ==============================
+# SYSTEM MODULE
+# ==============================
+
+metricbeat.modules:
+
+- module: system
+  period: 10s
+  metricsets:
+    - cpu
+    - memory
+    - network
+    - process
+    - process_summary
+    - filesystem
+    - fsstat
+    - load
+  processes: ['.*']
+
+
+# ==============================
+# ELASTICSEARCH MONITORING
+# ==============================
+
+- module: elasticsearch
+  period: 30s
+  hosts: ["http://ELASTIC_SERVER_IP:9200"]
+  username: "elastic"
+  password: "password"
+  metricsets:
+    - node
+    - node_stats
+    - cluster_stats
+
+
+# ==============================
+# KIBANA MONITORING
+# ==============================
+
+- module: kibana
+  period: 30s
+  hosts: ["http://ELASTIC_SERVER_IP:5601"]
+  username: "elastic"
+  password: "password"
+  metricsets:
+    - status
+
+
+# ==============================
+# OUTPUT
+# ==============================
+
+output.elasticsearch:
+  hosts: ["http://ELASTIC_SERVER_IP:9200"]
+  username: "metricbeat_user"
+  password: "password"
+  index: "metricbeat"
+
+setup.ilm.enabled: true
+
+
+# ==============================
+# MONITORING
+# ==============================
+
+monitoring.enabled: true
+monitoring.elasticsearch:
+  hosts: ["http://ELASTIC_SERVER_IP:9200"]
+  username: "metricbeat_user"
+  password: "password"
+
+
+# ==============================
+# HTTP STATS
+# ==============================
+
+http.enabled: true
+http.host: 0.0.0.0
+http.port: 5067
+
+
+# ==============================
+# LOGGING
+# ==============================
+
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /var/log/metricbeat
+  name: metricbeat
+  keepfiles: 7
+  permissions: 0644
