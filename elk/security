@@ -1,0 +1,238 @@
+Good decision. Running without security is fine temporarily, but production must have authentication enabled.
+
+We’ll do this cleanly and safely on your single-node cluster, and keep it extensible for future scaling.
+
+We’ll:
+	1.	Enable security in Elasticsearch
+	2.	Set passwords for built-in users
+	3.	Create an admin user
+	4.	Create Kibana user
+	5.	Create Filebeat & Metricbeat users
+
+Step by step.
+
+⸻
+
+🔐 STEP 1 — Enable Security in Elasticsearch
+
+Edit:
+
+/etc/elasticsearch/elasticsearch.yml
+
+Make sure this is present:
+
+xpack.security.enabled: true
+
+If not there, add it.
+
+Since you are single node:
+
+discovery.type: single-node
+
+Save file.
+
+Restart Elasticsearch:
+
+sudo systemctl restart elasticsearch
+
+It will now start with security enabled.
+
+⸻
+
+🔐 STEP 2 — Set Built-in User Passwords
+
+Now run:
+
+sudo /usr/share/elasticsearch/bin/elasticsearch-reset-password -u elastic
+
+It will generate or allow you to set password.
+
+Do same for kibana_system:
+
+sudo /usr/share/elasticsearch/bin/elasticsearch-reset-password -u kibana_system
+
+Save these passwords securely.
+
+Now test login:
+
+curl -u elastic http://localhost:9200
+
+If it asks for auth → good.
+
+⸻
+
+👑 STEP 3 — Create Admin User (Superuser)
+
+Login using elastic user:
+
+curl -u elastic -X POST "http://localhost:9200/_security/user/admin_user" \
+-H "Content-Type: application/json" -d '
+{
+  "password" : "StrongPassword123",
+  "roles" : [ "superuser" ],
+  "full_name" : "Cluster Admin"
+}'
+
+Now test:
+
+curl -u admin_user http://localhost:9200/_cluster/health
+
+This is your primary admin user going forward.
+
+You should avoid using elastic regularly.
+
+⸻
+
+🖥 STEP 4 — Configure Kibana to Use kibana_system
+
+Edit:
+
+/etc/kibana/kibana.yml
+
+Add:
+
+elasticsearch.hosts: ["http://127.0.0.1:9200"]
+elasticsearch.username: "kibana_system"
+elasticsearch.password: "PASSWORD_YOU_SET"
+
+Restart Kibana:
+
+sudo systemctl restart kibana
+
+Now open:
+
+http://SERVER_IP:5601
+
+Login with:
+	•	admin_user
+	•	StrongPassword123
+
+⸻
+
+📦 STEP 5 — Create Filebeat User
+
+We follow principle of least privilege.
+
+Create role:
+
+curl -u admin_user -X POST "http://localhost:9200/_security/role/filebeat_writer" \
+-H "Content-Type: application/json" -d '
+{
+  "cluster": ["monitor"],
+  "indices": [
+    {
+      "names": [ "filebeat*" ],
+      "privileges": ["create_index","create","write","auto_configure"]
+    }
+  ]
+}'
+
+Create user:
+
+curl -u admin_user -X POST "http://localhost:9200/_security/user/filebeat_user" \
+-H "Content-Type: application/json" -d '
+{
+  "password" : "FilebeatPass123",
+  "roles" : [ "filebeat_writer" ],
+  "full_name" : "Filebeat Service User"
+}'
+
+
+⸻
+
+📊 STEP 6 — Create Metricbeat User
+
+Create role:
+
+curl -u admin_user -X POST "http://localhost:9200/_security/role/metricbeat_writer" \
+-H "Content-Type: application/json" -d '
+{
+  "cluster": ["monitor"],
+  "indices": [
+    {
+      "names": [ "metricbeat*" ],
+      "privileges": ["create_index","create","write","auto_configure"]
+    }
+  ]
+}'
+
+Create user:
+
+curl -u admin_user -X POST "http://localhost:9200/_security/user/metricbeat_user" \
+-H "Content-Type: application/json" -d '
+{
+  "password" : "MetricbeatPass123",
+  "roles" : [ "metricbeat_writer" ],
+  "full_name" : "Metricbeat Service User"
+}'
+
+
+⸻
+
+🛠 STEP 7 — Update Beats Config
+
+In filebeat.yml:
+
+output.elasticsearch:
+  hosts: ["http://ELASTIC_IP:9200"]
+  username: "filebeat_user"
+  password: "FilebeatPass123"
+
+In metricbeat.yml:
+
+output.elasticsearch:
+  hosts: ["http://ELASTIC_IP:9200"]
+  username: "metricbeat_user"
+  password: "MetricbeatPass123"
+
+Restart both services.
+
+⸻
+
+🔎 Verify Everything
+
+Check:
+
+curl -u filebeat_user http://localhost:9200
+
+Check index creation.
+
+Check Kibana login.
+
+Check:
+
+GET _security/user
+
+in Dev Tools.
+
+⸻
+
+⚠ Production Advice
+
+Never:
+	•	Use elastic user in production apps
+	•	Give superuser to beats
+	•	Share admin password
+
+Always:
+	•	Create service-specific users
+	•	Limit privileges
+	•	Rotate passwords quarterly
+
+⸻
+
+🔥 When You Expand to Multi-Node Later
+
+Nothing changes for users.
+Security configuration remains valid cluster-wide.
+
+Only discovery settings change.
+
+⸻
+
+If you want, next I can give you:
+	•	Role design for read-only Kibana users
+	•	Separate Dev / Ops / Audit roles
+	•	API key authentication instead of passwords (more secure for Beats)
+
+That’s how mature Elastic deployments are structured.
