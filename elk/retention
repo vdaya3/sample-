@@ -1,0 +1,208 @@
+Excellent. This is exactly how production systems should be managed — control index size + control retention instead of letting disks explode.
+
+You have a single Elasticsearch node, so we’ll design ILM optimized for that reality.
+
+⸻
+
+🎯 Goal
+
+We will:
+	•	Rollover index at 5GB OR 1 day
+	•	Keep logs for 30 days
+	•	Delete automatically after 30 days
+	•	Use 0 replicas (single node)
+	•	Avoid shard explosion
+
+⸻
+
+🏗 Architecture Model (Single Node Best Practice)
+	•	1 primary shard
+	•	0 replicas
+	•	Hot phase only
+	•	Delete phase after retention
+
+No warm/cold nodes since you only have one server.
+
+⸻
+
+✅ STEP 1 — Create ILM Policy
+
+Run in Kibana Dev Tools:
+
+PUT _ilm/policy/filebeat_policy
+{
+  "policy": {
+    "phases": {
+      "hot": {
+        "actions": {
+          "rollover": {
+            "max_size": "5gb",
+            "max_age": "1d"
+          }
+        }
+      },
+      "delete": {
+        "min_age": "30d",
+        "actions": {
+          "delete": {}
+        }
+      }
+    }
+  }
+}
+
+What this means:
+	•	If index reaches 5GB → new index created
+	•	If 1 day passes → new index created
+	•	After 30 days → index deleted automatically
+
+Clean. Predictable. Controlled.
+
+⸻
+
+✅ STEP 2 — Create Index Template
+
+This connects ILM to new indices.
+
+PUT _index_template/filebeat_template
+{
+  "index_patterns": ["filebeat-*"],
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0,
+      "index.lifecycle.name": "filebeat_policy",
+      "index.lifecycle.rollover_alias": "filebeat"
+    }
+  }
+}
+
+
+⸻
+
+✅ STEP 3 — Create First Write Index (Bootstrap)
+
+This is important. ILM rollover requires alias.
+
+PUT filebeat-000001
+{
+  "aliases": {
+    "filebeat": {
+      "is_write_index": true
+    }
+  }
+}
+
+Now:
+	•	Filebeat must write to alias: filebeat
+	•	Elasticsearch manages real indices internally
+
+⸻
+
+✅ STEP 4 — Update Filebeat Output
+
+In filebeat.yml:
+
+output.elasticsearch:
+  hosts: ["http://ELASTIC_SERVER_IP:9200"]
+  username: "filebeat_user"
+  password: "password"
+  index: "filebeat"
+setup.ilm.enabled: false
+
+Important:
+	•	We disable Filebeat ILM
+	•	We use our custom ILM
+
+Restart Filebeat on all servers:
+
+systemctl restart filebeat
+
+
+⸻
+
+🔎 How To Monitor ILM
+
+Check rollover status:
+
+GET filebeat-*/_ilm/explain
+
+Check policy:
+
+GET _ilm/policy/filebeat_policy
+
+Check current index sizes:
+
+GET _cat/indices/filebeat-*?h=index,docs.count,store.size
+
+
+⸻
+
+📊 How To Decide Proper Size & Retention
+
+Let’s calculate correctly.
+
+If you ingest:
+	•	10GB per day
+	•	30 days retention
+→ 300GB storage required
+
+On single node:
+	•	Always keep 30–40% disk free
+	•	Never exceed 70% disk usage
+
+If disk is 500GB:
+	•	Safe usable = ~350GB
+
+So 30d retention for 10GB/day = OK
+
+If disk is 200GB:
+	•	You must reduce retention to 14 days
+
+⸻
+
+⚡ Advanced Production Advice (Strong Opinion)
+
+For single node:
+	•	Keep rollover between 3GB–5GB
+	•	Never exceed 1 primary shard per index
+	•	Never use replicas
+	•	Keep retention under disk safety threshold
+
+Shards kill clusters faster than volume does.
+
+⸻
+
+🚨 Why This Will Also Help Your Filebeat Stopping Issue
+
+When indices grow too large:
+	•	Merges become heavy
+	•	Write threadpool blocks
+	•	Filebeat backpressure happens
+	•	Beats look like “stopped”
+
+ILM stabilizes ingestion performance.
+
+⸻
+
+🎯 Final Checklist
+
+After configuration confirm:
+
+GET _alias/filebeat
+
+You should see:
+
+filebeat-000001 → alias: filebeat (is_write_index: true)
+
+
+⸻
+
+If you tell me:
+	•	Daily log GB
+	•	Disk size on ES server
+	•	RAM on ES server
+
+I’ll calculate exact rollover size + retention for your environment.
+
+That’s how you run logging like a production engineer.
