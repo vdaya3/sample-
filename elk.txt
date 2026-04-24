@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Why We Need the Licensed Version of ELK Stack</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+font-family: -apple-system, BlinkMacSystemFont, ‘Segoe UI’, Roboto, sans-serif;
+font-size: 14px;
+color: #172B4D;
+background: #F4F5F7;
+padding: 32px 16px;
+}
+
+.page-wrapper {
+max-width: 960px;
+margin: 0 auto;
+background: #fff;
+border-radius: 4px;
+box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+padding: 48px 56px 64px;
+}
+
+/* ── Header ── */
+.page-header {
+border-bottom: 2px solid #0052CC;
+padding-bottom: 20px;
+margin-bottom: 32px;
+}
+
+.breadcrumb {
+font-size: 12px;
+color: #6B778C;
+margin-bottom: 8px;
+}
+
+.breadcrumb span { margin: 0 4px; }
+
+h1 {
+font-size: 28px;
+font-weight: 700;
+color: #0052CC;
+line-height: 1.3;
+margin-bottom: 12px;
+}
+
+.meta {
+font-size: 12px;
+color: #6B778C;
+display: flex;
+gap: 20px;
+flex-wrap: wrap;
+}
+
+.meta-badge {
+background: #DEEBFF;
+color: #0052CC;
+padding: 2px 8px;
+border-radius: 3px;
+font-weight: 600;
+font-size: 11px;
+text-transform: uppercase;
+letter-spacing: 0.5px;
+}
+
+/* ── Info Panel ── */
+.info-panel {
+background: #DEEBFF;
+border-left: 4px solid #0052CC;
+border-radius: 3px;
+padding: 16px 20px;
+margin-bottom: 32px;
+font-size: 13px;
+color: #172B4D;
+line-height: 1.6;
+}
+
+.info-panel strong { color: #0052CC; }
+
+/* ── TOC ── */
+.toc {
+background: #F4F5F7;
+border: 1px solid #DFE1E6;
+border-radius: 3px;
+padding: 16px 20px;
+margin-bottom: 36px;
+}
+
+.toc-title {
+font-size: 11px;
+font-weight: 700;
+text-transform: uppercase;
+letter-spacing: 1px;
+color: #6B778C;
+margin-bottom: 10px;
+}
+
+.toc ol {
+padding-left: 20px;
+line-height: 2;
+}
+
+.toc a {
+color: #0052CC;
+text-decoration: none;
+font-size: 13px;
+}
+
+.toc a:hover { text-decoration: underline; }
+
+/* ── Sections ── */
+h2 {
+font-size: 20px;
+font-weight: 700;
+color: #172B4D;
+margin: 40px 0 14px;
+padding-bottom: 6px;
+border-bottom: 1px solid #DFE1E6;
+}
+
+h3 {
+font-size: 15px;
+font-weight: 700;
+color: #172B4D;
+margin: 24px 0 10px;
+}
+
+p {
+line-height: 1.7;
+color: #172B4D;
+margin-bottom: 12px;
+}
+
+/* ── Comparison Table ── */
+.comparison-table {
+width: 100%;
+border-collapse: collapse;
+margin: 20px 0 28px;
+font-size: 13px;
+}
+
+.comparison-table th {
+padding: 10px 14px;
+text-align: left;
+font-size: 11px;
+font-weight: 700;
+text-transform: uppercase;
+letter-spacing: 0.6px;
+border-bottom: 2px solid #DFE1E6;
+white-space: nowrap;
+}
+
+.comparison-table th:first-child { color: #6B778C; }
+.comparison-table th:nth-child(2) { background: #FFF0B3; color: #974F0C; }
+.comparison-table th:nth-child(3) { background: #E3FCEF; color: #006644; }
+
+.comparison-table td {
+padding: 10px 14px;
+border-bottom: 1px solid #F4F5F7;
+vertical-align: top;
+line-height: 1.5;
+}
+
+.comparison-table tr:nth-child(even) td { background: #F9FAFB; }
+
+.comparison-table td:nth-child(2) { background: rgba(255,240,179,0.2); }
+.comparison-table td:nth-child(3) { background: rgba(227,252,239,0.2); }
+
+/* ── Feature Grid ── */
+.feature-grid {
+display: grid;
+grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+gap: 16px;
+margin: 20px 0 28px;
+}
+
+.feature-card {
+border: 1px solid #DFE1E6;
+border-radius: 4px;
+padding: 16px;
+background: #FAFBFC;
+}
+
+.feature-card-icon {
+font-size: 22px;
+margin-bottom: 8px;
+}
+
+.feature-card h4 {
+font-size: 13px;
+font-weight: 700;
+color: #0052CC;
+margin-bottom: 6px;
+}
+
+.feature-card p {
+font-size: 12px;
+color: #6B778C;
+margin: 0;
+line-height: 1.5;
+}
+
+/* ── Status badges ── */
+.badge {
+display: inline-block;
+padding: 2px 8px;
+border-radius: 3px;
+font-size: 11px;
+font-weight: 600;
+vertical-align: middle;
+}
+
+.badge-yes { background: #E3FCEF; color: #006644; }
+.badge-no  { background: #FFEBE6; color: #BF2600; }
+.badge-partial { background: #FFF0B3; color: #974F0C; }
+
+/* ── Note / Warning boxes ── */
+.callout {
+border-left: 4px solid;
+border-radius: 3px;
+padding: 14px 18px;
+margin: 20px 0;
+font-size: 13px;
+line-height: 1.6;
+}
+
+.callout-warning {
+border-color: #FF8B00;
+background: #FFFAE6;
+color: #172B4D;
+}
+
+.callout-success {
+border-color: #36B37E;
+background: #E3FCEF;
+color: #172B4D;
+}
+
+.callout-title {
+font-weight: 700;
+margin-bottom: 4px;
+font-size: 12px;
+text-transform: uppercase;
+letter-spacing: 0.5px;
+}
+
+.callout-warning .callout-title { color: #974F0C; }
+.callout-success .callout-title { color: #006644; }
+
+/* ── Bullet lists ── */
+ul, ol {
+padding-left: 22px;
+margin-bottom: 14px;
+}
+
+li {
+line-height: 1.8;
+color: #172B4D;
+font-size: 13px;
+}
+
+li strong { color: #0052CC; }
+
+/* ── Decision matrix ── */
+.decision-table {
+width: 100%;
+border-collapse: collapse;
+margin: 16px 0 24px;
+font-size: 13px;
+}
+
+.decision-table th {
+background: #0052CC;
+color: white;
+padding: 10px 14px;
+text-align: left;
+font-size: 12px;
+font-weight: 600;
+}
+
+.decision-table td {
+padding: 10px 14px;
+border-bottom: 1px solid #DFE1E6;
+line-height: 1.5;
+}
+
+.decision-table tr:nth-child(even) td { background: #F4F5F7; }
+
+/* ── Summary box ── */
+.summary-box {
+background: linear-gradient(135deg, #0052CC 0%, #0065FF 100%);
+color: white;
+border-radius: 6px;
+padding: 28px 32px;
+margin: 36px 0 20px;
+}
+
+.summary-box h2 {
+color: white;
+border-color: rgba(255,255,255,0.3);
+font-size: 18px;
+margin-top: 0;
+}
+
+.summary-box p {
+color: rgba(255,255,255,0.9);
+font-size: 13px;
+margin-bottom: 8px;
+}
+
+.summary-box ul { margin-bottom: 0; }
+.summary-box li { color: rgba(255,255,255,0.9); }
+
+/* ── Footer ── */
+.page-footer {
+margin-top: 48px;
+padding-top: 16px;
+border-top: 1px solid #DFE1E6;
+font-size: 12px;
+color: #6B778C;
+display: flex;
+justify-content: space-between;
+flex-wrap: wrap;
+gap: 8px;
+}
+</style>
+
+</head>
+<body>
+<div class="page-wrapper">
+
+  <!-- Header -->
+
+  <div class="page-header">
+    <div class="breadcrumb">
+      Infrastructure &amp; Platform <span>›</span> Observability <span>›</span> ELK Stack Decision
+    </div>
+    <h1>Why We Need the Licensed Version of ELK Stack</h1>
+    <div class="meta">
+      <span><strong>Owner:</strong> Platform Engineering</span>
+      <span><strong>Last Updated:</strong> April 2026</span>
+      <span><strong>Status:</strong> <span class="meta-badge">Approved</span></span>
+      <span><strong>Audience:</strong> Engineering, InfoSec, Leadership</span>
+    </div>
+  </div>
+
+  <!-- Purpose panel -->
+
+  <div class="info-panel">
+    <strong>📋 Purpose of this document:</strong> This page outlines the technical, security, and operational justifications for adopting the <strong>Elastic (licensed) version</strong> of the ELK Stack over the open-source (Apache 2.0 / SSPL) distribution. It is intended to inform budget decisions, procurement discussions, and architecture reviews.
+  </div>
+
+  <!-- TOC -->
+
+  <div class="toc">
+    <div class="toc-title">Contents</div>
+    <ol>
+      <li><a href="#background">Background &amp; Stack Overview</a></li>
+      <li><a href="#licensing">Licensing Landscape</a></li>
+      <li><a href="#gaps">Critical Gaps in Open-Source ELK</a></li>
+      <li><a href="#features">Key Features Unlocked by the Licensed Version</a></li>
+      <li><a href="#comparison">Feature Comparison: Open Source vs. Licensed</a></li>
+      <li><a href="#usecases">Our Use-Case Requirements</a></li>
+      <li><a href="#risk">Risk of Staying on Open Source</a></li>
+      <li><a href="#recommendation">Recommendation &amp; Decision</a></li>
+    </ol>
+  </div>
+
+  <!-- Section 1 -->
+
+  <h2 id="background">1. Background &amp; Stack Overview</h2>
+  <p>The ELK Stack — comprising <strong>Elasticsearch</strong> (search &amp; analytics engine), <strong>Logstash</strong> (data ingestion), and <strong>Kibana</strong> (visualization) — is the industry-standard platform for log management, observability, and security analytics. Beats agents and the Elastic Agent further extend data collection capabilities.</p>
+  <p>Elastic offers two distinct licensing tiers:</p>
+  <ul>
+    <li><strong>Open-source (free):</strong> Apache 2.0 core features, available on self-hosted deployments.</li>
+    <li><strong>Elastic subscription (licensed):</strong> Adds enterprise security, machine learning, alerting, fleet management, and support — available through Elastic Cloud or self-managed with a subscription key.</li>
+  </ul>
+
+  <!-- Section 2 -->
+
+  <h2 id="licensing">2. Licensing Landscape</h2>
+  <p>In January 2021, Elastic moved Elasticsearch and Kibana from the Apache 2.0 license to a <strong>dual-license model</strong>: the Elastic License 2.0 (ELv2) and the Server Side Public License (SSPL). This change was significant:</p>
+  <ul>
+    <li>SSPL requires any company offering ELK as a managed/cloud service to open-source their entire stack — a condition that effectively bars use as a hosted offering.</li>
+    <li>AWS and Google forked the project as <strong>OpenSearch</strong> in response, but OpenSearch lags in ML, alerting maturity, and UX compared to the Elastic-licensed stack.</li>
+    <li>The open-source (free) tier of Elastic itself is <strong>feature-limited</strong> and does not include security, ML, or advanced monitoring by default.</li>
+  </ul>
+
+  <div class="callout callout-warning">
+    <div class="callout-title">⚠️ Important</div>
+    The "open-source" or "free" tier of ELK should not be confused with "full-featured". Core security features like TLS encryption, role-based access control, and SAML/SSO authentication are <strong>not available</strong> in the free tier as of Elasticsearch 8.x.
+  </div>
+
+  <!-- Section 3 -->
+
+  <h2 id="gaps">3. Critical Gaps in Open-Source ELK</h2>
+  <p>The following capabilities are either absent or severely limited in the free/open-source distribution:</p>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-card-icon">🔒</div>
+      <h4>Security &amp; Access Control</h4>
+      <p>No TLS encryption, no RBAC, no field- or document-level security. Indices are effectively open to anyone with network access.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-card-icon">🔑</div>
+      <h4>Authentication (SSO/SAML)</h4>
+      <p>LDAP, Active Directory, SAML, and OIDC/OAuth2 integrations require a subscription. Teams must manage local users only.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-card-icon">🤖</div>
+      <h4>Machine Learning</h4>
+      <p>Anomaly detection, forecasting, and NLP inference are licensed features. Cannot detect unusual log patterns or forecast capacity without them.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-card-icon">🔔</div>
+      <h4>Alerting &amp; Actions</h4>
+      <p>Native Kibana alerting rules with PagerDuty, Slack, and email connectors require a license. Free tier offers no reliable alerting pipeline.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-card-icon">🛡️</div>
+      <h4>SIEM / Threat Detection</h4>
+      <p>The Elastic Security SIEM, detection rules, and threat intelligence integrations are gated behind the subscription.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-card-icon">📊</div>
+      <h4>Cross-Cluster Search &amp; Replication</h4>
+      <p>Multi-region or multi-cluster setups for HA and disaster recovery require a Gold or Platinum license.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-card-icon">📦</div>
+      <h4>Snapshot &amp; Restore (Repository Mgmt)</h4>
+      <p>Automated snapshot lifecycle management (SLM) for backups is a licensed feature.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-card-icon">🚀</div>
+      <h4>Fleet &amp; Elastic Agent Management</h4>
+      <p>Centralized agent policy management and Fleet Server require a subscription for production-scale usage.</p>
+    </div>
+  </div>
+
+  <!-- Section 4 -->
+
+  <h2 id="features">4. Key Features Unlocked by the Licensed Version</h2>
+
+  <h3>4.1 Security &amp; Compliance</h3>
+  <ul>
+    <li><strong>TLS/SSL encryption</strong> at rest and in transit — mandatory for PCI-DSS, HIPAA, SOC 2, ISO 27001 compliance.</li>
+    <li><strong>Role-Based Access Control (RBAC)</strong> — granular permissions per index, field, or document.</li>
+    <li><strong>Audit logging</strong> — tracks who accessed or changed what, essential for compliance audits.</li>
+    <li><strong>Single Sign-On (SSO)</strong> via SAML 2.0, OIDC, LDAP, and Active Directory — integrates with our existing identity provider (e.g., Okta, Azure AD).</li>
+    <li><strong>IP filtering</strong> and <strong>API key management</strong> for service-to-service authentication.</li>
+  </ul>
+
+  <h3>4.2 Observability</h3>
+  <ul>
+    <li><strong>APM (Application Performance Monitoring)</strong> — distributed tracing, error tracking, and service maps with full correlation across logs, metrics, and traces.</li>
+    <li><strong>Uptime &amp; Synthetic Monitoring</strong> — proactive availability checks and SLA reporting.</li>
+    <li><strong>Infrastructure monitoring dashboards</strong> — out-of-the-box dashboards for Kubernetes, cloud services, and hosts.</li>
+  </ul>
+
+  <h3>4.3 Machine Learning &amp; Analytics</h3>
+  <ul>
+    <li><strong>Anomaly detection jobs</strong> — automatically surface unusual spikes, dips, or behavioral changes in logs and metrics.</li>
+    <li><strong>Forecast capacity</strong> — predict storage and compute needs based on historical patterns.</li>
+    <li><strong>NLP &amp; semantic search</strong> — power intelligent log analysis and search with transformer models.</li>
+  </ul>
+
+  <h3>4.4 Alerting &amp; Incident Management</h3>
+  <ul>
+    <li>Native <strong>Kibana alerting rules</strong> with support for threshold, anomaly, and custom query-based triggers.</li>
+    <li><strong>Connectors</strong> to PagerDuty, Slack, Microsoft Teams, Jira, and email.</li>
+    <li><strong>Case management</strong> built into Kibana — track incidents from detection to resolution.</li>
+  </ul>
+
+  <h3>4.5 Enterprise Reliability</h3>
+  <ul>
+    <li><strong>Cross-cluster replication (CCR)</strong> — replicate indices across data centers for HA and DR.</li>
+    <li><strong>Snapshot Lifecycle Management (SLM)</strong> — automated, policy-driven backups.</li>
+    <li><strong>Searchable snapshots</strong> — query cold data stored in object storage (S3/GCS/Azure) without full rehydration.</li>
+    <li><strong>Dedicated support SLA</strong> — 24×7 Elastic support with guaranteed response times.</li>
+  </ul>
+
+  <!-- Section 5 -->
+
+  <h2 id="comparison">5. Feature Comparison: Open Source vs. Licensed</h2>
+  <table class="comparison-table">
+    <thead>
+      <tr>
+        <th>Feature / Capability</th>
+        <th>Open Source (Free)</th>
+        <th>Licensed (Subscription)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>TLS Encryption (in-transit)</strong></td>
+        <td><span class="badge badge-no">✗ Not included</span></td>
+        <td><span class="badge badge-yes">✓ Included</span></td>
+      </tr>
+      <tr>
+        <td><strong>Role-Based Access Control</strong></td>
+        <td><span class="badge badge-no">✗ Not included</span></td>
+        <td><span class="badge badge-yes">✓ Included</span></td>
+      </tr>
+      <tr>
+        <td><strong>SSO / SAML / LDAP / AD</strong></td>
+        <td><span class="badge badge-no">✗ Not included</span></td>
+        <td><span class="badge badge-yes">✓ Included</span></td>
+      </tr>
+      <tr>
+        <td><strong>Audit Logging</strong></td>
+        <td><span class="badge badge-no">✗ Not included</span></td>
+        <td><span class="badge badge-yes">✓ Gold+</span></td>
+      </tr>
+      <tr>
+        <td><strong>Field / Document Level Security</strong></td>
+        <td><span class="badge badge-no">✗ Not included</span></td>
+        <td><span class="badge badge-yes">✓ Platinum+</span></td>
+      </tr>
+      <tr>
+        <td><strong>Kibana Alerting (Native)</strong></td>
+        <td><span class="badge badge-no">✗ Not included</span></td>
+        <td><span class="badge badge-yes">✓ Included</span></td>
+      </tr>
+      <tr>
+        <td><strong>Machine Learning / Anomaly Detection</strong></td>
+        <td><span class="badge badge-no">✗ Not included</span></td>
+        <td><span class="badge badge-yes">✓ Platinum+</span></td>
+      </tr>
+      <tr>
+        <td><strong>SIEM / Threat Detection Rules</strong></td>
+        <td><span class="badge badge-no">✗ Not included</span></td>
+        <td><span class="badge badge-yes">✓ Included</span></td>
+      </tr>
+      <tr>
+        <td><strong>APM &amp; Distributed Tracing</strong></td>
+        <td><span class="badge badge-partial">~ Basic only</span></td>
+        <td><span class="badge badge-yes">✓ Full (correlated)</span></td>
+      </tr>
+      <tr>
+        <td><strong>Cross-Cluster Replication (CCR)</strong></td>
+        <td><span class="badge badge-no">✗ Not included</span></td>
+        <td><span class="badge badge-yes">✓ Platinum+</span></td>
+      </tr>
+      <tr>
+        <td><strong>Snapshot Lifecycle Management</strong></td>
+        <td><span class="badge badge-no">✗ Not included</span></td>
+        <td><span class="badge badge-yes">✓ Included</span></td>
+      </tr>
+      <tr>
+        <td><strong>Searchable Snapshots</strong></td>
+        <td><span class="badge badge-no">✗ Not included</span></td>
+        <td><span class="badge badge-yes">✓ Platinum+</span></td>
+      </tr>
+      <tr>
+        <td><strong>Fleet &amp; Elastic Agent Management</strong></td>
+        <td><span class="badge badge-partial">~ Limited</span></td>
+        <td><span class="badge badge-yes">✓ Full</span></td>
+      </tr>
+      <tr>
+        <td><strong>Elastic Support (SLA)</strong></td>
+        <td><span class="badge badge-no">✗ Community only</span></td>
+        <td><span class="badge badge-yes">✓ 24×7 SLA</span></td>
+      </tr>
+      <tr>
+        <td><strong>Compliance-Ready (PCI/HIPAA/SOC2)</strong></td>
+        <td><span class="badge badge-no">✗ Not achievable</span></td>
+        <td><span class="badge badge-yes">✓ Supported</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Section 6 -->
+
+  <h2 id="usecases">6. Our Use-Case Requirements</h2>
+  <p>The following requirements from our organization directly necessitate the licensed version:</p>
+
+  <table class="decision-table">
+    <thead>
+      <tr>
+        <th>Requirement</th>
+        <th>Business Driver</th>
+        <th>License Tier Needed</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Enforce SSO via Okta / Azure AD</td>
+        <td>Security policy — no local user accounts in production tools</td>
+        <td>Gold</td>
+      </tr>
+      <tr>
+        <td>Encrypt all log data in transit</td>
+        <td>Compliance: SOC 2, ISO 27001</td>
+        <td>Basic (paid)</td>
+      </tr>
+      <tr>
+        <td>Restrict index access per team</td>
+        <td>Multi-tenant environment; PII protection</td>
+        <td>Basic (paid)</td>
+      </tr>
+      <tr>
+        <td>Automated alerting to PagerDuty</td>
+        <td>On-call &amp; incident response operations</td>
+        <td>Gold</td>
+      </tr>
+      <tr>
+        <td>Anomaly detection on application logs</td>
+        <td>Proactive incident detection, reduce MTTD</td>
+        <td>Platinum</td>
+      </tr>
+      <tr>
+        <td>Full APM with trace correlation</td>
+        <td>Microservices observability strategy</td>
+        <td>Gold</td>
+      </tr>
+      <tr>
+        <td>Disaster recovery via CCR</td>
+        <td>99.9% uptime SLA; multi-region deployment</td>
+        <td>Platinum</td>
+      </tr>
+      <tr>
+        <td>Automated snapshot backups (SLM)</td>
+        <td>Data retention policy &amp; DR</td>
+        <td>Gold</td>
+      </tr>
+      <tr>
+        <td>Security event detection (SIEM)</td>
+        <td>SOC operations &amp; threat monitoring</td>
+        <td>Enterprise</td>
+      </tr>
+      <tr>
+        <td>Vendor support &amp; patch SLA</td>
+        <td>Production-critical infrastructure</td>
+        <td>Any paid tier</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Section 7 -->
+
+  <h2 id="risk">7. Risk of Staying on Open Source</h2>
+
+  <div class="callout callout-warning">
+    <div class="callout-title">⚠️ Risk Assessment</div>
+    Remaining on the open-source (free) tier of ELK Stack exposes the organization to the following risks:
+  </div>
+
+  <h3>7.1 Security Risks</h3>
+  <ul>
+    <li>All Elasticsearch indices are accessible without authentication by default — a significant attack surface if exposed (even internally).</li>
+    <li>Inability to enforce encryption means log data (which may contain PII, credentials, or sensitive business logic) travels and rests in plaintext.</li>
+    <li>No audit trail — impossible to prove who accessed or modified data during a security review or breach investigation.</li>
+  </ul>
+
+  <h3>7.2 Compliance Risks</h3>
+  <ul>
+    <li>Failing SOC 2 Type II, PCI-DSS, or HIPAA audits due to lack of encryption, access control, and audit logging.</li>
+    <li>Regulatory fines and reputational damage in the event of a data breach attributed to a missing security control.</li>
+  </ul>
+
+  <h3>7.3 Operational Risks</h3>
+  <ul>
+    <li>No native alerting pipeline means incidents go undetected longer, increasing MTTR and business impact.</li>
+    <li>No vendor support — community forums and GitHub issues become the only recourse during a production outage.</li>
+    <li>No automated backups — a cluster failure or accidental deletion could result in permanent log data loss.</li>
+  </ul>
+
+  <h3>7.4 Scalability Risks</h3>
+  <ul>
+    <li>Without CCR or searchable snapshots, scaling to multi-region or cost-optimized tiered storage is not feasible.</li>
+    <li>Manual agent management at scale (100+ hosts) becomes operationally untenable without Fleet.</li>
+  </ul>
+
+  <!-- Section 8 -->
+
+  <h2 id="recommendation">8. Recommendation &amp; Decision</h2>
+
+  <div class="callout callout-success">
+    <div class="callout-title">✅ Recommendation</div>
+    Procure an <strong>Elastic Platinum or Enterprise subscription</strong> to meet our security, compliance, observability, and operational requirements. The licensed version is not optional — it is the minimum viable configuration for production use in our environment.
+  </div>
+
+  <h3>Suggested Tier: Elastic Platinum (or Enterprise for SIEM)</h3>
+  <ul>
+    <li>Covers all security, RBAC, SSO, ML, CCR, SLM, APM, and alerting requirements.</li>
+    <li>Enterprise adds SIEM, unlimited ML nodes, and dedicated support escalation paths — recommended if security operations (SOC) is in scope.</li>
+    <li>Elastic Cloud (managed) should be evaluated alongside self-managed to reduce operational overhead.</li>
+  </ul>
+
+  <div class="summary-box">
+    <h2>Summary</h2>
+    <p>The open-source (free) ELK stack is a useful starting point for development or proof-of-concept work, but it is fundamentally unsuitable for production workloads in a security-conscious, compliance-regulated organization. The licensed version provides:</p>
+    <ul>
+      <li>✓ Encryption, RBAC, and SSO — the baseline for any production log system</li>
+      <li>✓ Native alerting and incident management — critical for on-call operations</li>
+      <li>✓ Machine learning anomaly detection — reduces MTTD on production incidents</li>
+      <li>✓ Disaster recovery (CCR + SLM) — protects against data loss and outages</li>
+      <li>✓ Vendor support SLA — essential for infrastructure of this criticality</li>
+      <li>✓ Compliance readiness — enables SOC 2, PCI-DSS, ISO 27001 certification</li>
+    </ul>
+  </div>
+
+  <!-- Footer -->
+
+  <div class="page-footer">
+    <span>📄 Platform Engineering · Observability Team</span>
+    <span>Last reviewed: April 2026 · Next review: October 2026</span>
+  </div>
+
+</div>
+</body>
+</html>
